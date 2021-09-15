@@ -1,36 +1,34 @@
-const numSocket = new Rete.Socket('Number value');
+var numSocket = new Rete.Socket("Number value");
 
-const VueNumControl = {
-  props: ['readonly', 'emitter', 'ikey', 'getData', 'putData'],
+var VueNumControl = {
+  props: ["readonly", "emitter", "ikey", "getData", "putData"],
   template: '<input type="number" :readonly="readonly" :value="value" @input="change($event)" @dblclick.stop="" @pointerdown.stop="" @pointermove.stop=""/>',
   data() {
     return {
       value: 0,
-    }
+    };
   },
   methods: {
-    change(e){
+    change(e) {
       this.value = +e.target.value;
       this.update();
     },
     update() {
-      if (this.ikey)
-        this.putData(this.ikey, this.value)
-      this.emitter.trigger('process');
-    }
+      if (this.ikey) this.putData(this.ikey, this.value);
+      this.emitter.trigger("process");
+    },
   },
   mounted() {
     this.value = this.getData(this.ikey);
-  }
-}
+  },
+};
 
 class NumControl extends Rete.Control {
-
   constructor(emitter, key, readonly) {
     super(key);
     this.component = VueNumControl;
     this.props = { emitter, ikey: key, readonly };
-    }
+  }
 
   setValue(val) {
     this.vueContext.value = val;
@@ -39,29 +37,29 @@ class NumControl extends Rete.Control {
 
 class NumComponent extends Rete.Component {
   constructor() {
-    super('Number input');
+    super("Input");
   }
 
   builder(node) {
-    let out1 = new Rete.Output("num", "Number", numSocket);
+    let out1 = new Rete.Output("num", "Value", numSocket);
 
     return node.addControl(new NumControl(this.editor, "num")).addOutput(out1);
   }
 
   worker(node, inputs, outputs) {
-    outputs['num'] = node.data.num;
+    outputs["num"] = node.data.num;
   }
 }
 
 class AddComponent extends Rete.Component {
   constructor() {
-    super("Add");
+    super("Plus");
   }
 
   builder(node) {
-    let inp1 = new Rete.Input("num", "Number", numSocket);
-    let inp2 = new Rete.Input("num2", "Number2", numSocket);
-    let out = new Rete.Output("num", "Number", numSocket);
+    let inp1 = new Rete.Input("num", "Value", numSocket);
+    let inp2 = new Rete.Input("num2", "Value", numSocket);
+    let out = new Rete.Output("num", "Value", numSocket);
 
     inp1.addControl(new NumControl(this.editor, "num"));
     inp2.addControl(new NumControl(this.editor, "num2"));
@@ -86,15 +84,15 @@ class AddComponent extends Rete.Component {
   }
 }
 
-class AddComponent extends Rete.Component {
+class TimesComponent extends Rete.Component {
   constructor() {
-    super("Aultiply");
+    super("Multiply");
   }
 
   builder(node) {
-    let inp1 = new Rete.Input("num", "Number", numSocket);
-    let inp2 = new Rete.Input("num2", "Number2", numSocket);
-    let out = new Rete.Output("num", "Number", numSocket);
+    let inp1 = new Rete.Input("num", "Value", numSocket);
+    let inp2 = new Rete.Input("num2", "Value", numSocket);
+    let out = new Rete.Output("num", "Value", numSocket);
 
     inp1.addControl(new NumControl(this.editor, "num"));
     inp2.addControl(new NumControl(this.editor, "num2"));
@@ -121,7 +119,7 @@ class AddComponent extends Rete.Component {
 
 (async () => {
   let container = document.querySelector("#rete");
-  let components = [new NumComponent(), new AddComponent()];
+  let components = [new NumComponent(), new AddComponent(), new TimesComponent()];
 
   let editor = new Rete.NodeEditor("demo@0.1.0", container);
   editor.use(ConnectionPlugin.default);
@@ -140,19 +138,28 @@ class AddComponent extends Rete.Component {
   });
 
   let n1 = await components[0].createNode({ num: 2 });
-  let n2 = await components[0].createNode({ num: 0 });
+  let n2 = await components[0].createNode({ num: 3 });
   let add = await components[1].createNode();
+  let times = await components[2].createNode();
 
   n1.position = [80, 200];
   n2.position = [80, 400];
-  add.position = [500, 240];
+  add.position = [500, 200];
+  times.position = [750, 400];
 
   editor.addNode(n1);
   editor.addNode(n2);
   editor.addNode(add);
+  editor.addNode(times);
+
 
   editor.connect(n1.outputs.get("num"), add.inputs.get("num"));
   editor.connect(n2.outputs.get("num"), add.inputs.get("num2"));
+  editor.connect(n2.outputs.get("num"), times.inputs.get("num2"));
+  editor.connect(add.outputs.get("num"), times.inputs.get("num"));
+
+  
+  
 
   editor.on(
     "process nodecreated noderemoved connectioncreated connectionremoved",
